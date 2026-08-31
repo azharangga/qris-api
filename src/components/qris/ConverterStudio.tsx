@@ -124,7 +124,7 @@ export function ConverterStudio() {
       }
 
       const resString = convertQRIS(inputString.trim(), {
-        amount: numAmount,
+        amount: Math.floor(numAmount),
         fee: feeObj,
       });
 

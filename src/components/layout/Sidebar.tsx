@@ -179,7 +179,7 @@ export function Sidebar() {
                 activeSection === "tester" && "active"
               )}
               data-s="tester"
-              data-tooltip="Interactive Playground"
+              data-tooltip="QRIS Playground"
               onClick={() => {
                 setActiveSection("tester");
                 closeSidebarMobile();
@@ -188,7 +188,7 @@ export function Sidebar() {
               <span className="nav-icon">
                 <i className="fa-solid fa-qrcode" />
               </span>
-              <span className="nav-text">Interactive Playground</span>
+              <span className="nav-text">QRIS Playground</span>
             </a>
           </div>
 
@@ -237,6 +237,24 @@ export function Sidebar() {
               <span className="nav-text">Parse Payload</span>
             </a>
             <a
+              href="#decode"
+              className={cn(
+                "nav-item",
+                activeSection === "decode" && "active"
+              )}
+              data-s="decode"
+              data-tooltip="Decode Image Content"
+              onClick={() => {
+                setActiveSection("decode");
+                closeSidebarMobile();
+              }}
+            >
+              <span className="nav-icon">
+                <i className="fa-solid fa-camera" />
+              </span>
+              <span className="nav-text">Decode Image</span>
+            </a>
+            <a
               href="#validate"
               className={cn(
                 "nav-item",
@@ -272,23 +290,99 @@ export function Sidebar() {
               </span>
               <span className="nav-text">Convert Dynamic</span>
             </a>
+          </div>
+
+          <div className="sidebar-nav-group">
+            <div className="sidebar-nav-label">QRIS Payment Services</div>
             <a
-              href="#generate"
+              href="#create-payment"
               className={cn(
                 "nav-item",
-                activeSection === "generate" && "active"
+                activeSection === "create-payment" && "active"
               )}
-              data-s="generate"
-              data-tooltip="Generate Image"
+              data-s="create-payment"
+              data-tooltip="Create Payment"
               onClick={() => {
-                setActiveSection("generate");
+                setActiveSection("create-payment");
                 closeSidebarMobile();
               }}
             >
               <span className="nav-icon">
-                <i className="fa-solid fa-image" />
+                <i className="fa-solid fa-file-invoice" />
               </span>
-              <span className="nav-text">Generate Image</span>
+              <span className="nav-text">Create Payment</span>
+            </a>
+            <a
+              href="#get-payment"
+              className={cn(
+                "nav-item",
+                activeSection === "get-payment" && "active"
+              )}
+              data-s="get-payment"
+              data-tooltip="Get Payment Details"
+              onClick={() => {
+                setActiveSection("get-payment");
+                closeSidebarMobile();
+              }}
+            >
+              <span className="nav-icon">
+                <i className="fa-solid fa-info-circle" />
+              </span>
+              <span className="nav-text">Get Details</span>
+            </a>
+            <a
+              href="#cancel-payment"
+              className={cn(
+                "nav-item",
+                activeSection === "cancel-payment" && "active"
+              )}
+              data-s="cancel-payment"
+              data-tooltip="Cancel Payment"
+              onClick={() => {
+                setActiveSection("cancel-payment");
+                closeSidebarMobile();
+              }}
+            >
+              <span className="nav-icon">
+                <i className="fa-solid fa-ban" />
+              </span>
+              <span className="nav-text">Cancel Payment</span>
+            </a>
+            <a
+              href="#confirm-payment"
+              className={cn(
+                "nav-item",
+                activeSection === "confirm-payment" && "active"
+              )}
+              data-s="confirm-payment"
+              data-tooltip="Confirm Payment"
+              onClick={() => {
+                setActiveSection("confirm-payment");
+                closeSidebarMobile();
+              }}
+            >
+              <span className="nav-icon">
+                <i className="fa-solid fa-check-circle" />
+              </span>
+              <span className="nav-text">Confirm Payment</span>
+            </a>
+            <a
+              href="#qr-payment"
+              className={cn(
+                "nav-item",
+                activeSection === "qr-payment" && "active"
+              )}
+              data-s="qr-payment"
+              data-tooltip="Generate QR Code"
+              onClick={() => {
+                setActiveSection("qr-payment");
+                closeSidebarMobile();
+              }}
+            >
+              <span className="nav-icon">
+                <i className="fa-solid fa-qrcode" />
+              </span>
+              <span className="nav-text">Generate QR Code</span>
             </a>
           </div>
         </nav>

@@ -6,21 +6,21 @@ import { successResponse, errorResponse } from "@/lib/api/response";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null);
-    const qris = body?.qris;
+    const { raw } = body || {};
 
-    if (!qris || typeof qris !== "string") {
-      return errorResponse("INVALID_PAYLOAD", "Field 'qris' is required and must be a string", 400);
+    if (!raw || typeof raw !== "string") {
+      return errorResponse("INVALID_PAYLOAD", "Field 'raw' (QR string or decoded payload) is required", 400);
     }
 
-    const validation = validateQRIS(qris.trim());
+    const validation = validateQRIS(raw.trim());
     if (!validation.valid) {
-      return errorResponse("INVALID_QRIS", "Invalid QRIS payload format", 422, validation.errors);
+      return errorResponse("INVALID_QRIS", "Decoded payload is not a valid QRIS string", 422, validation.errors);
     }
 
-    const parsed = parseQRIS(qris.trim());
+    const parsed = parseQRIS(raw.trim());
     
     return successResponse({
-      payload: qris.trim(),
+      decodedText: raw.trim(),
       merchant: {
         name: parsed.merchantName || null,
         city: parsed.merchantCity || null,
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return errorResponse(
       "SERVER_ERROR",
-      error instanceof Error ? error.message : "Failed to parse QRIS data",
+      error instanceof Error ? error.message : "Failed to decode payload",
       500
     );
   }

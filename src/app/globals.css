@@ -173,9 +173,13 @@ html.theme-switching .theme-transition-snapshot {
     height: 22px;
     font-size: 16px;
   }
-  .sidebar-panel.lg-collapsed .nav-item.active::before {
-    display: none;
-  }
+.dark .nav-item {
+  color: #9d9da6;
+}
+.dark .nav-item:hover {
+  background: #252529;
+  color: #f0f0f3;
+}
   .sidebar-panel.lg-collapsed .sidebar-dropdown-toggle {
     justify-content: center;
     padding: 12px;
@@ -479,30 +483,9 @@ html.theme-switching .theme-transition-snapshot {
   color: #09090b;
   font-weight: 600;
 }
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 60%;
-  border-radius: 0 4px 4px 0;
-  background: #09090b;
-}
-.dark .nav-item {
-  color: #9d9da6;
-}
-.dark .nav-item:hover {
-  background: #252529;
-  color: #f0f0f3;
-}
 .dark .nav-item.active {
   background: transparent;
   color: #f0f0f3;
-}
-.dark .nav-item.active::before {
-  background: #f0f0f3;
 }
 .nav-item .nav-icon {
   width: 18px;

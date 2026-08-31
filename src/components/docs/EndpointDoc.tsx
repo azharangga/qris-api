@@ -4,6 +4,14 @@ import { useState } from "react";
 import { ParamTable, Parameter } from "./ParamTable";
 import { SnippetTabs } from "./SnippetTabs";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface EndpointProps {
   id: string;
@@ -14,8 +22,9 @@ interface EndpointProps {
   parameters: Parameter[];
   defaultPayload?: any;
   snippetGuide?: any;
-  inputFields?: { name: string; label: string; placeholder: string; defaultValue?: string }[];
+  inputFields?: { name: string; label: string; placeholder: string; defaultValue?: string; options?: string[] }[];
   supportsImage?: boolean;
+  hasPaymentTabs?: boolean;
 }
 
 export function EndpointDoc({
@@ -29,6 +38,7 @@ export function EndpointDoc({
   snippetGuide,
   inputFields,
   supportsImage = false,
+  hasPaymentTabs = false,
 }: EndpointProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,13 +48,14 @@ export function EndpointDoc({
   const [showResponse, setShowResponse] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activeResTab, setActiveResTab] = useState<"json" | "image">("json");
+  const [activeCreateMode, setActiveCreateMode] = useState<"custom" | "demo">("custom");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
 
-  // Form input states (Initially empty, populated only by Example click)
+  // Form input states (Initially empty on page load, populated only by Example click)
   const [fieldValues, setFieldValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     inputFields?.forEach((f) => {
-      init[f.name] = "";
+      init[f.name] = f.options ? f.defaultValue || f.options[0] : "";
     });
     return init;
   });
@@ -67,16 +78,26 @@ export function EndpointDoc({
     setShowResponse(false);
     setImageDataUrl(null);
     try {
+      toast.loading("Sending request...", { id: "req-toast" });
       let reqUrl = path;
       let reqBody: any = null;
 
+      if (path.includes("[id]")) {
+        reqUrl = path.replace("[id]", fieldValues.id || "");
+      }
+
       if (method === "GET") {
-        const query = new URLSearchParams(fieldValues).toString();
+        const queryParams = { ...fieldValues };
+        delete queryParams.id;
+        const query = new URLSearchParams(queryParams).toString();
         if (query) reqUrl += `?${query}`;
       } else if (method === "POST") {
         if (inputFields && inputFields.length > 0) {
           reqBody = { ...fieldValues };
+          delete reqBody.id;
+          if (id === "convert") reqBody.format = "data_url";
           if (reqBody.amount) reqBody.amount = Number(reqBody.amount);
+          if (reqBody.expiresIn && !isNaN(Number(reqBody.expiresIn))) reqBody.expiresIn = Number(reqBody.expiresIn);
         } else if (defaultPayload) {
           reqBody = defaultPayload;
         }
@@ -86,7 +107,38 @@ export function EndpointDoc({
         method,
         headers: { "Content-Type": "application/json" },
       };
-      if (reqBody) options.body = JSON.stringify(reqBody);
+      
+      // Do not send body for POST if it's empty (like in cancel/confirm endpoints)
+      if (reqBody && Object.keys(reqBody).length > 0 && method !== "GET") {
+        options.body = JSON.stringify(reqBody);
+      }
+
+      // Check if it's an image streaming endpoint (QR generation from payment ID)
+      if (reqUrl.endsWith("/qr") || (reqUrl.includes("/qr?") && !reqUrl.includes("qris/generate"))) {
+        const imgRes = await fetch(reqUrl, { method: "GET" });
+        setStatus(imgRes.status);
+        setStatusText(httpStatusText(imgRes.status));
+
+        if (imgRes.ok) {
+          const blob = await imgRes.blob();
+          const url = URL.createObjectURL(blob);
+          setImageDataUrl(url);
+          setResponse({ status: "success", format: fieldValues.format || "png", stream: "binary/image" });
+          setActiveResTab("image");
+          setShowResponse(true);
+          setLoading(false);
+          toast.success("Image received successfully", { id: "req-toast" });
+          return;
+        } else {
+          // If error on image endpoint, fallback to JSON parsing
+          const errData = await imgRes.json();
+          setResponse(errData);
+          setShowResponse(true);
+          setLoading(false);
+          toast.error(`Request failed (${imgRes.status})`, { id: "req-toast" });
+          return;
+        }
+      }
 
       const res = await fetch(reqUrl, options);
       const data = await res.json();
@@ -95,17 +147,32 @@ export function EndpointDoc({
       setResponse(data);
       setShowResponse(true);
 
-      if (data?.dataUrl) {
-        setImageDataUrl(data.dataUrl);
-      } else if (data?.dynamic_qris) {
+      if (res.ok) {
+        toast.success(`Request success (${res.status})`, { id: "req-toast" });
+      } else {
+        toast.error(`Request error (${res.status})`, { id: "req-toast" });
+      }
+
+      // Handle standard envelope format response
+      const targetPayload = data?.success ? data.data : data;
+
+      // Only show QR preview if it is not a cancellation or confirmation response
+      if (path.includes("/cancel") || path.includes("/confirm")) {
+        setImageDataUrl(null);
+        return;
+      }
+
+      if (targetPayload?.dataUrl) {
+        setImageDataUrl(targetPayload.dataUrl);
+      } else if (targetPayload?.dynamicQris || targetPayload?.qrisString) {
         try {
-          const qrRes = await fetch("/api/qris/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: data.dynamic_qris }),
-          });
-          const qrData = await qrRes.json();
-          if (qrData.dataUrl) setImageDataUrl(qrData.dataUrl);
+          const qrRes = await fetch(
+            `/api/qris/payment/${targetPayload.paymentId || "pay_01K4Z8X7M3N5Q2R6T9W8A1B4C"}/qr?format=png`
+          );
+          if (qrRes.ok) {
+            const blob = await qrRes.blob();
+            setImageDataUrl(URL.createObjectURL(blob));
+          }
         } catch {}
       }
     } catch (err: any) {
@@ -113,6 +180,7 @@ export function EndpointDoc({
       setStatusText("Internal Server Error");
       setResponse({ error: err.message || "Failed to make request" });
       setShowResponse(true);
+      toast.error("Network or internal error", { id: "req-toast" });
     } finally {
       setLoading(false);
     }
@@ -122,6 +190,7 @@ export function EndpointDoc({
     if (!response) return;
     navigator.clipboard.writeText(JSON.stringify(response, null, 2));
     setCopied(true);
+    toast.success("Payload copied to clipboard");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -183,8 +252,53 @@ export function EndpointDoc({
 
           {/* Try It Input Container */}
           <div className="input-container">
-            <div className="playground-header">
+            <div className="playground-header relative flex items-center justify-between min-h-[42px] px-3">
               <span className="playground-title">TRY IT</span>
+              
+              {hasPaymentTabs && (
+                <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 p-0.5 rounded-md text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveCreateMode("custom");
+                      setFieldValues({ qris: "", amount: "", referenceId: "", expiresIn: "" });
+                      toast.info("Custom Mode aktif");
+                    }}
+                    className={`px-3 py-1 rounded transition ${
+                      activeCreateMode === "custom"
+                        ? "bg-white dark:bg-zinc-900 shadow-sm text-zinc-950 dark:text-white font-semibold"
+                        : "text-zinc-500 hover:text-zinc-950 dark:hover:text-white"
+                    }`}
+                  >
+                    Custom Mode
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveCreateMode("demo");
+                      if (defaultPayload) {
+                        const mapped: Record<string, string> = {};
+                        Object.keys(defaultPayload).forEach((k) => {
+                          mapped[k] =
+                            typeof defaultPayload[k] === "object"
+                              ? JSON.stringify(defaultPayload[k])
+                              : String(defaultPayload[k]);
+                        });
+                        setFieldValues(mapped);
+                        toast.success("Demo Mode aktif");
+                      }
+                    }}
+                    className={`px-3 py-1 rounded transition ${
+                      activeCreateMode === "demo"
+                        ? "bg-white dark:bg-zinc-900 shadow-sm text-zinc-950 dark:text-white font-semibold"
+                        : "text-zinc-500 hover:text-zinc-950 dark:hover:text-white"
+                    }`}
+                  >
+                    Demo Mode
+                  </button>
+                </div>
+              )}
+
               <button
                 type="button"
                 className="btn-fill-example px-3 py-1 text-xs font-medium border border-zinc-200 dark:border-zinc-800 rounded-md bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition shadow-sm"
@@ -198,6 +312,7 @@ export function EndpointDoc({
                           : String(defaultPayload[k]);
                     });
                     setFieldValues(mapped);
+                    toast.success("Example payload loaded");
                   }
                 }}
               >
@@ -210,22 +325,51 @@ export function EndpointDoc({
               {inputFields && inputFields.length > 0 && (
                 <div className={`grid ${gridColsClass} gap-3`}>
                   {inputFields.map((field) => (
-                    <div key={field.name} className="w-full">
+                    <div key={field.name} className="w-full min-w-0">
                       <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-400 mb-1">
-                        {field.label}
+                        {field.label.trim().endsWith("*") ? (
+                          <>
+                            {field.label.replace(/\s*\*+\s*$/, "")} <span className="text-red-500">*</span>
+                          </>
+                        ) : (
+                          field.label
+                        )}
                       </label>
-                      <input
-                        type="text"
-                        placeholder={field.placeholder}
-                        value={fieldValues[field.name] || ""}
-                        onChange={(e) =>
-                          setFieldValues({
-                            ...fieldValues,
-                            [field.name]: e.target.value,
-                          })
-                        }
-                        className="input-field"
-                      />
+                      {field.options && field.options.length > 0 ? (
+                        <Select
+                          value={fieldValues[field.name] || field.defaultValue || field.options[0]}
+                          onValueChange={(val) =>
+                            setFieldValues({
+                              ...fieldValues,
+                              [field.name]: val,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-full text-xs h-9 bg-white dark:bg-[#0f0f12] border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100">
+                            <SelectValue placeholder={field.placeholder || "Select option"} />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-[#18181b] border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100">
+                            {field.options.map((opt) => (
+                              <SelectItem key={opt} value={opt}>
+                                {opt}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder={field.placeholder}
+                          value={fieldValues[field.name] || ""}
+                          onChange={(e) =>
+                            setFieldValues({
+                              ...fieldValues,
+                              [field.name]: e.target.value,
+                            })
+                          }
+                          className="input-field"
+                        />
+                      )}
                     </div>
                   ))}
                 </div>

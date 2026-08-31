@@ -38,7 +38,7 @@ async function main() {
   }
 
   const amountStr = await ask("\n[?] Input nominal (Rupiah): ");
-  const amount = parseInt(amountStr, 10);
+  const amount = Math.floor(parseInt(amountStr, 10));
   if (isNaN(amount) || amount <= 0) {
     console.log("[✗] Invalid amount.");
     rl.close();

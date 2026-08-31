@@ -20,7 +20,7 @@ export default function Page() {
         <div className="px-4 sm:px-6 md:px-12 lg:px-20 py-2">
           <div id="tester" className="py-4 section-animate">
             <h2 className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-white mb-2">
-              Interactive QRIS Playground
+              QRIS Playground
             </h2>
             <p className="ep-desc mb-4">
               Test parsing, validating, and dynamic generation directly in your browser. Upload a QRIS image or provide raw string payload.

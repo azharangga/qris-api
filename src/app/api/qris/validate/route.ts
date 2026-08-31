@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { validateQRIS } from "@/lib/core/validator";
+import { successResponse, errorResponse } from "@/lib/api/response";
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,27 +8,19 @@ export async function POST(request: NextRequest) {
     const qris = body?.qris;
 
     if (!qris || typeof qris !== "string") {
-      return NextResponse.json(
-        {
-          valid: false,
-          errors: ["Missing or invalid 'qris' payload string in request body"],
-        },
-        { status: 400 }
-      );
+      return errorResponse("INVALID_PAYLOAD", "Field 'qris' is required and must be a string", 400);
     }
 
     const validation = validateQRIS(qris.trim());
-    return NextResponse.json({
+    return successResponse({
       valid: validation.valid,
       errors: validation.errors,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        valid: false,
-        errors: [error instanceof Error ? error.message : "Validation process failed"],
-      },
-      { status: 500 }
+    return errorResponse(
+      "SERVER_ERROR",
+      error instanceof Error ? error.message : "Validation process failed",
+      500
     );
   }
 }

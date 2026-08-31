@@ -23,8 +23,12 @@ export function SnippetTabs({
     }
   }, []);
 
-  const fullUrl = `${origin}${endpointPath}`;
+  const placeholderId = bodyPayload?.id && /&lt;|</.test(String(bodyPayload.id)) ? String(bodyPayload.id) : "<PAYMENT_ID>";
+  const fullUrl = endpointPath.includes("[id]")
+    ? `${origin}${endpointPath.replace("[id]", placeholderId)}`
+    : `${origin}${endpointPath}`;
   const jsonString = bodyPayload ? JSON.stringify(bodyPayload, null, 2) : "";
+  const dynamicBodyPayload = bodyPayload;
 
   const snippets: Record<string, string> = {
     curl: isPost
@@ -153,15 +157,20 @@ function highlightSyntax(code: string) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
     
-  hl = hl.replace(/(&lt;[A-Z_]+?&gt;)/g, '<span style="color: #f87171; font-weight: 600;">$1</span>');
+  hl = hl.replace(/(&lt;[A-Z_]+?&gt;)/g, '<span style="color: #f87171; font-weight: 700;">$1</span>');
   hl = hl.replace(/\b(curl|GET|POST)\b|(-X|-H|-d)/g, '<span style="color: #c678dd;">$1</span>');
   hl = hl.replace(/(".*?")/g, (match) => {
     if (/&lt;[A-Z_]+?&gt;/.test(match)) {
-      return match.replace(/(&lt;[A-Z_]+?&gt;)/g, '"<span style="color: #f87171; font-weight: 600;">$1</span>"');
+      return match.replace(/(&lt;[A-Z_]+?&gt;)/g, '"<span style="color: #f87171; font-weight: 700;">$1</span>"');
     }
     return `<span style="color: #98c379;">${match}</span>`;
   });
-  hl = hl.replace(/(https?:\/\/[^\s"]+)/g, '<span style="color: #61afef; text-decoration: underline;">$1</span>');
+  hl = hl.replace(/(https?:\/\/[^\s"]+)/g, (match) => {
+    if (/&lt;[A-Z_]+?&gt;/.test(match)) {
+      return match.replace(/(&lt;[A-Z_]+?&gt;)/g, '<span style="color: #f87171; font-weight: 700;">$1</span>');
+    }
+    return `<span style="color: #61afef; text-decoration: underline;">${match}</span>`;
+  });
   hl = hl.replace(/\b(const|let|var|await|import|from|export|default|function|return|package|main|func|defer|if|throw|try|catch|new|nil|err|use|suspend|val|class|struct|Future|async|throws|guard|else)\b/g, '<span style="color: #c678dd;">$1</span>');
   hl = hl.replace(/\b(fetch|print|jsonDecode|jsonEncode)\b|console\.log|io\.ReadAll|JSON\.stringify|\.json|\.ok|\.status|Http::timeout|requests\.(get|post)/g, '<span style="color: #61afef;">$1</span>');
 
