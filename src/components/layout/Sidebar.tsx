@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { openPlayground } from "@/components/qris/PlaygroundModal";
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -172,24 +173,20 @@ export function Sidebar() {
               </span>
               <span className="nav-text">Introduction</span>
             </a>
-            <a
-              href="#tester"
-              className={cn(
-                "nav-item",
-                activeSection === "tester" && "active"
-              )}
-              data-s="tester"
-              data-tooltip="QRIS Playground"
+            <button
+              type="button"
               onClick={() => {
-                setActiveSection("tester");
                 closeSidebarMobile();
+                openPlayground();
               }}
+              className="nav-item w-full text-left"
+              data-tooltip="QRIS Playground"
             >
               <span className="nav-icon">
                 <i className="fa-solid fa-qrcode" />
               </span>
               <span className="nav-text">QRIS Playground</span>
-            </a>
+            </button>
           </div>
 
           {/* System Group */}

@@ -222,7 +222,7 @@ export function EndpointDoc({
       : "grid-cols-1 sm:grid-cols-3";
 
   return (
-    <div id={id} className="section-animate py-4 border-b border-zinc-100 dark:border-zinc-800">
+    <div id={id} className="section-animate pt-3 pb-4 border-b border-zinc-100 dark:border-zinc-800 first:pt-1">
       <div
         className="ep-header flex items-center gap-3 cursor-pointer"
         onClick={() => setIsCollapsed(!isCollapsed)}
